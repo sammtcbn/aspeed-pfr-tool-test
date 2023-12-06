@@ -19,8 +19,9 @@
 #include "config.h"
 #include "status.h"
 #include "info.h"
+#include "spdm.h"
 
-static const char short_options[] = "hvb:a:c:p:uk:w:r:dsi";
+static const char short_options[] = "hvb:a:c:p:uk:w:r:dsiS:";
 static const struct option
 	long_options[] = {
 	{ "help", no_argument, NULL, 'h' },
@@ -36,6 +37,7 @@ static const struct option
 	{ "debug", no_argument, NULL, 'd' },
 	{ "status", no_argument, NULL, 's' },
 	{ "info", no_argument, NULL, 'i' },
+	{ "spdm", required_argument, NULL, 'S' },
 	{ 0, 0, 0, 0 }
 };
 
@@ -58,6 +60,7 @@ static void usage(FILE *fp, int argc, char **argv)
 		" -d | --debug          debug mode\n"
 		" -s | --status         show rot status\n"
 		" -i | --info           show bmc/pch version info\n"
+		" -S | --spdm           enable or disable SPDM attestation\n"
 		"example:\n"
 		"--provision /usr/share/pfrconfig/rk_pub.pem\n"
 		"--provision show\n"
@@ -72,6 +75,8 @@ static void usage(FILE *fp, int argc, char **argv)
 		"--read_reg <rf_addr> <length> (block mode)\n"
 		"--status\n"
 		"--info\n"
+		"--spdm enable\n"
+		"--spdm disable\n"
 		"",
 		argv[0]);
 }
@@ -140,6 +145,7 @@ int main(int argc, char *argv[])
 	uint8_t bus_flag = 0;
 	uint8_t status_flag = 0;
 	uint8_t info_flag = 0;
+	int8_t spdm_flag = -1;
 	ARGUMENTS args = {0};
 	uint8_t rot_addr;
 	char option = 0;
@@ -205,6 +211,13 @@ int main(int argc, char *argv[])
 			break;
 		case 'i':
 			info_flag = 1;
+			break;
+		case 'S':
+			if (strcmp(optarg, "enable") == 0) {
+				spdm_flag = 1;
+			} else if (strcmp(optarg, "disable") == 0) {
+				spdm_flag = 0;
+			}
 			break;
 		default:
 			usage(stdout, argc, argv);
@@ -274,6 +287,9 @@ int main(int argc, char *argv[])
 
 	if (info_flag)
 		show_info(args);
+
+	if (spdm_flag != -1)
+		setSPDMFunction(args, spdm_flag);
 
 	if (args.i2c_fd >= 0)
 		close(args.i2c_fd);
