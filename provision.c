@@ -294,7 +294,7 @@ int provisionLock(ARGUMENTS args)
 
 int provisionShow(ARGUMENTS args)
 {
-	uint8_t read_buf[64];
+	uint8_t read_buf[SHA512_LENGTH];
 
 	// Read BMC offset
 	if (readUfmProvFifoCmd(args, MB_UFM_PROV_RD_BMC_OFFSETS, read_buf, 12)) {
@@ -358,12 +358,25 @@ int doProvision(ARGUMENTS args)
 
 int provision(ARGUMENTS args)
 {
-	if (strncmp(args.provision_cmd, "show", strlen("show")) == 0)
+	FILE *file = NULL;
+
+	if (strcmp(args.provision_cmd, "show") == 0)
 		return provisionShow(args);
-	else if (strncmp(args.provision_cmd, "lock", strlen("lock")) == 0)
+	else if (strcmp(args.provision_cmd, "lock") == 0)
 		return provisionLock(args);
-	else
+	else {
+		file = fopen(args.provision_cmd, "r");
+
+		if (file == NULL) {
+			printf("input root key: %s does not exist\n", args.provision_cmd);
+			return 1;
+		} else {
+			printf("input root key: %s\n", args.provision_cmd);
+			fclose(file);
+		}
+
 		return doProvision(args);
+	}
 }
 
 int unprovision(ARGUMENTS args)

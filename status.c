@@ -12,6 +12,7 @@
 #include "mailbox_enums.h"
 #include "arguments.h"
 #include "i2c_utils.h"
+#include "provision.h"
 
 static const char *g_plat_state[256] = {
 	"Unknown",
@@ -397,6 +398,14 @@ static void get_ufm_provisioning_status(ARGUMENTS args, uint8_t *ufm_provisionin
 	}
 }
 
+static void get_cpld_hash(ARGUMENTS args, uint8_t *hash_buf, uint8_t len)
+{
+	int i;
+
+	for (i = 0; i < len; i++)
+		hash_buf[i] = i2cReadByteData(args, MB_CPLD_HASH + i);
+}
+
 void show_status(ARGUMENTS args)
 {
 	uint8_t pstate_code;
@@ -411,10 +420,23 @@ void show_status(ARGUMENTS args)
 	const char *major_err;
 	const char *minor_err;
 	char ufm_provisioning_status[2048] = { 0 };
+	uint8_t hash_buf[SHA512_LENGTH] = { 0 };
+	int i;
 
 	printf("\nCPLD Rot Static Identifier   : 0x%02x\n", get_cpld_id(args));
 	printf("CPLD Rot Release Version     : 0x%02x\n", get_cpld_ver(args));
-	printf("CPLD Rot SVN                 : 0x%02x\n\n", get_cpld_svn(args));
+	printf("CPLD Rot SVN                 : 0x%02x\n", get_cpld_svn(args));
+	printf("CPLD Rot Hash                : ");
+
+	get_cpld_hash(args, hash_buf, SHA512_LENGTH);
+	for (i = 0; i < SHA512_LENGTH; ++i) {
+		printf("%02x ", hash_buf[i]);
+		if ((i+1)%16 == 0) {
+			printf("\n");
+			printf("                               ");
+		}
+	}
+	printf("\n");
 
 	plat_state = get_plat_state(args, &pstate_code);
 	printf("Platform State Code          : 0x%02x\n", pstate_code);
